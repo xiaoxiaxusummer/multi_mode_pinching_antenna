@@ -1,11 +1,11 @@
 % ------------------------------------------------------------
 % Multi-mode PASS (dual-mode, multi-PA) simulation:
-%   Sum-rate vs number of PAs/antennas N (N = 6..24) at fixed transmit power.
+%   Sum-rate vs number of PAs/antennas N at fixed transmit power.
 %
 % Methods compared (all averaged over Monte-Carlo user drops):
 %   - Proposed Case-1: multi-mode PASS (mode selection) 
 %   - Proposed Case-2: multi-mode PASS (mode combining) 
-%   - Baseline: fixed PA propagation constant betaPA = (beta1+beta2)/2
+%   - Proposed Uniform Mode Combining: fixed PA propagation constant betaPA = (beta1+beta2)/2
 %   - Baseline: single-mode PASS + TDMA
 %   - Baseline: conventional MISO with I antennas + Hybrid BF (RF+BB)
 % ------------------------------------------------------------
@@ -114,10 +114,8 @@ cfg.lambdaBF_max = 1e3;
 
 %% ====================== Sweep over I ======================
 N_list = 4:2:16;
-% Monte Carlo trials
 baseSeed = 6;
-test_num = 100;
-% Pre-generate user locations (deterministic)
+test_num = 100; % Monte Carlo trials
 rng(baseSeed,'twister');
 x_user_min = 5;
 a_all = x_user_min*ones(2,test_num) + rand(2,test_num)*(Lwg-x_user_min);
@@ -142,7 +140,7 @@ for it = 1:test_num
         x_arr = dmin*(0:1:N-1);
         tx_pos = [x_arr(:), zeros(N,1), hPA*ones(N,1)];
 
-        % D = 0.2;   % fixed aperture, e.g., 10 cm
+        % D = 0.2;   % fixed aperture for fixed MIMO
         % x_arr = linspace(-D/2, D/2, N);
         % tx_pos = [x_arr(:), zeros(N,1), hPA*ones(N,1)];
 
@@ -153,7 +151,7 @@ for it = 1:test_num
         cfg.Pmax=Pmax; cfg.sigma2=sigma2; 
         cfg.N=N; cfg.K=K; cfg.M=M;
         cfg.Lpa=Lpa;
-        cfg.kappa_fixed = (pi/6)/cfg.Lpa;  % sin(kappa*Lpa)=sin(pi/6)=0.5
+        cfg.kappa_fixed = (pi/6)/cfg.Lpa;  % sin(kappa*Lpa)=sin(pi/6)=0.5 is the maximum radiation ratio
 
         cfg.kappa_match = cfg.kappa_fixed;
 
@@ -224,9 +222,9 @@ ylabel('Sum rate (bps/Hz)','Interpreter','latex');
 % title(sprintf('Dual-mode PASS @ %.0f GHz, $P_{tx}$ = %.1f dBm', fc/1e9, P_tx_dBm), 'Interpreter','latex');
 
 legend({ ...
-    'Prop. multi-mode PASS (mode selection)', ...
-    'Prop. multi-mode PASS (mode combining)', ...
-    'Prop. multi-mode PASS (uniform mode combining)', ...
+    'Multi-mode PASS (mode selection)', ...
+    'Multi-mode PASS (mode combining)', ...
+    'Multi-mode PASS (uniform mode combining)', ...
     'Single-mode PASS (TDMA)', ...
     'Conventional MISO (Hybrid BF)' ...
     }, 'Location','best');
@@ -235,11 +233,11 @@ set(gcf, 'PaperUnits', 'centimeters', 'PaperSize', [22, 16], 'PaperPositionMode'
 set(gca,'FontSize',14,'FontName','Times New Roman');
 
 if ~exist('figs','dir'), mkdir('figs'); end
-savefig(sprintf('figs/rate_I_Ptx%.0fdBm_multiPA.fig', P_tx_dBm));
-print(gcf, sprintf('figs/rate_I_Ptx%.0fdBm_multiPA.pdf', P_tx_dBm), '-dpdf','-painters');
+savefig(sprintf('figs/rate_N_Ptx%.0fdBm_multiPA.fig', P_tx_dBm));
+print(gcf, sprintf('figs/rate_N_Ptx%.0fdBm_multiPA.pdf', P_tx_dBm), '-dpdf','-painters');
 
 % Save raw data
-save(sprintf('figs/data_rate_I_Ptx%.0fdBm.mat', P_tx_dBm), ...
+save(sprintf('figs/rate_N_Ptx%.0fdBm.mat', P_tx_dBm), ...
     'N_list','P_tx_dBm','Pmax','R_case1','R_case2','R_midbeta','R_tdma1','R_mimo_hybrid');
 
 function out = pso_KPBF_multiPA_case1_optx_beta_lambda_p(cfg, PSO, x0, beta0, lambda0, p0)
@@ -709,8 +707,7 @@ end
 end
 
 %% ======================================================================
-
-%% ======================== Baselines ====================================
+%% ======================== Baselines ===================================
 %% ======================================================================
 
 function Rtdma = tdma_singlemode_PASS(cfg, x)
@@ -736,10 +733,6 @@ snr2 = cfg.Pmax * abs(h2)^2 / cfg.sigma2;
 
 Rtdma = 0.5*log2(1+snr1) + 0.5*log2(1+snr2);
 end
-
-%% ======================================================================
-%% ============================ WMMSE ===================================
-%% ======================================================================
 
 
 function Rsum = sumrate_from_HW(H, W, sigma2)
