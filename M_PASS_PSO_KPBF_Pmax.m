@@ -94,16 +94,12 @@ PSO.case2_elite_frac = 0.20;
 % ParBF numerical bounds
 cfg.lambdaBF_min = 1e-2;
 cfg.lambdaBF_max = 1e2;
-
-% CASE-1 vs CASE-2 COMPARISON:
-PSO.warmstart_case2      = false; %true;   % Case-2 starts from Case-1 best
+PSO.warmstart_case2      = true;   % Case-2 starts from Case-1 best
 PSO.radius               = inf;    % set to finite value (e.g., 10) to re-enable local search around init
-% Case-2 mixed init: use a small elite set around Case-1 best + remaining random.
-% Typical values: 0.05~0.10.
 PSO.case2_elite_frac     = 0.2;
 
 %% ====================== Fixed MIMO baseline (I antennas) ======================
-% N antennas along x-axis from (0,0,hPA) with half-wavelength spacing
+% N antennas with half-wavelength spacing
 N_MIMO_1 = N;
 tx_pos_1 = zeros(N,3);
 for i=1:N_MIMO_1
