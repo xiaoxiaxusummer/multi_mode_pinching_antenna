@@ -5,7 +5,7 @@
 %     Case 2: mode combining
 %   Proposed algorithm: PSO-KPBF
 %   Baselines:
-%     (B1) single-mode PASS + TDMA (mode1->user1 half-slot, mode2->user2 half-slot)
+%     (B1) single-mode PASS + TDMA (user1 half-slot, user2 half-slot)
 %     (B2) hybrid beamforming based MISO with N antennas + WMMSE precoding
 % ------------------------------------------------------------
 
