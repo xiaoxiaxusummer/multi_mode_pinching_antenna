@@ -29,8 +29,8 @@ This is achieved by continuously tuning $\beta_{n}^{\mathrm{PA}}$ of PA $n$ with
 > where the propagation constant of each PA can be preconfigued at $\beta=(\beta_{1}+\beta_{2}+...\beta_{M})/M$. Our simulation results demonstrate the efficiency of this design.
 
 **2.** A **Particle Swarm Optimization with KKT Parameterized Beamforming (PSO-KPBF)** algorithm, which jointly optimizes digital beamforming, pinching locations, and PA propagation constants for sum rate maximization.
-> PSO searches for desirable KPBF dual parameters, pinching locations, and propagation constants of PAs. For each PSO particle, **KPBF** reconstructs KKT-conditioned beamforming using the dual prameters. 
-> It enjoys following **benefits**:
+> PSO searches for desirable KPBF dual parameters, pinching locations, and propagation constants of PAs. For each PSO particle, **KPBF** reconstructs KKT-conditioned beamforming from the dual prameters for fast fitness evaluation. 
+> It has following **benefits**:
 >- Reconstructing stationary beamforming solutions without WMMSE iterations in a low-complexity way.
 >- Guiding black-box swarm search by KKT solutions, significantly reducing the searching space. 
 
