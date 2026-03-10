@@ -12,7 +12,7 @@ The code reproduces the simulation results presented in the paper.
 ### Concept of Multi-Mode PASS
 
 Pinching-Antenna Systems (PASS) have recently emerged as a promising flexible-antenna technology. 
-**Multi-mode PASS** allows a single waveguide to excite **multiple propagation modes** to simultaneously serve multiple users. 
+**Multi-mode PASS** allows a single waveguide to excite **multiple electromagnetic modes** to simultaneously serve multiple users. 
 - Multi-mode PASS enables **mode-domain multiplexing** and offers extra **degrees of freedom (DoFs)**.
 - Compared to conventional PASS, where each waveguide can support only a *single* independent data stream, spectral efficiency and resource utilization can be significantly improved.
 
