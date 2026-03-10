@@ -32,9 +32,10 @@ This is achieved by continuously tuning the propagation constant $\beta_{n}^{\ma
 > **Uniform Mode Combining**: A practical operating protocol is uniform mode combining,
 > where the propagation constant of each PA can be preconfigued at $\beta=(\beta_{1}+\beta_{2}+...\beta_{M})/M$. Our simulation results demonstrate the efficiency of this design.
 
-**2. Proposed Algorithm**: The paper proposes the **Particle Swarm Optimization with KKT Parameterized Beamforming (PSO-KPBF) Algorithm** to jointly optimize the digital beamforming, pinching locations, and PA propagation constants.
->**KPBF** reconstructs KKT-conditioned beamforming solutions of WMMSE problem, which is parameterized by dual varaiables. 
->Then, PSO jointly predicts KPBF dual parameters, pinching locations, and propagation constants of PAs. 
+**2.** The paper proposes the **Particle Swarm Optimization with KKT Parameterized Beamforming (PSO-KPBF)** algorithm to jointly optimize digital beamforming, pinching locations, and PA propagation constants.
+>**KPBF** reconstructs KKT-conditioned beamforming solutions of WMMSE problem, which are parameterized by dual varaiables. 
+>Then, PSO finds desirable local optima of KPBF dual parameters, pinching locations, and propagation constants of PAs.
+>
 > **Benefit**:
 >- Reconstructing stationary beamforming solutions without WMMSE iterations in a low-complexity way.
 >- Guiding black-box swarm search by KKT solutions, significantly reducing the searching space. 
@@ -56,11 +57,11 @@ Simply run [M_PASS_PSO_KPBF_vs_N.m](./M_PASS_PSO_KPBF_vs_N.m)
 
 
 ## ❤️ Citation
-If you use this code in your research, please cite the following paper: 
+If you find this work useful for your research, please consider citing: 
 
 X. Xu, X. Mu, Y. Liu, and A. Nallanathan,
 “Multi-Mode Pinching-Antenna Systems: Mode Selection or Mode Combining?”
 arXiv:2603.08472, 2026.
 
 ## 📄 Related Work
-The fundamental concept of mode and the detailed physic model of multi-mode PASS can be found in paper ``Multi-Mode Pinching Antenna Systems Enabled Multi-User Communications'' [[arXiv Preprint](https://arxiv.org/abs/2601.20780)]. In this previous work, the PAs are divided into two groups for fixed mode selection. 
+The fundamental concept and detailed physic model of multi-mode PASS can be found in paper ``Multi-Mode Pinching Antenna Systems Enabled Multi-User Communications'' [[arXiv Preprint](https://arxiv.org/abs/2601.20780)]. In this previous work, the PAs are divided into two groups for fixed mode selection. 
