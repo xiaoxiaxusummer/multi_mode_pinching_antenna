@@ -9,11 +9,13 @@ The code reproduces the simulation results presented in the paper.
 
 ## ✨ Key Idea
 
-Pinching-Antenna Systems (PASS) have recently emerged as a promising architecture for flexible and efficient wireless communications. 
-This work proposes **new operating protocols** and optimization methods for **multi-mode PASS**. 
-- **Multi-mode PASS** allows a single waveguide to excite **multiple propagation modes** to simultaneously serve multiple users. 
-- This enables **mode-domain multiplexing** and offers extra **degrees of freedom (DoFs)**.
-- Compared to conventional PASS, where each waveguide can support only a *single* independent data stream, multi-mode PASS significantly improves spectral efficiency and resource utilization.
+### Concept of Multi-Mode PASS
+
+>Pinching-Antenna Systems (PASS) have recently emerged as a promising architecture for flexible and efficient wireless communications. 
+>This work proposes **new operating protocols** and optimization methods for **multi-mode PASS**. 
+>- **Multi-mode PASS** allows a single waveguide to excite **multiple propagation modes** to simultaneously serve multiple users. 
+>- This enables **mode-domain multiplexing** and offers extra **degrees of freedom (DoFs)**.
+>- Compared to conventional PASS, where each waveguide can support only a *single* independent data stream, multi-mode PASS significantly improves spectral efficiency and resource utilization.
 
 
 
