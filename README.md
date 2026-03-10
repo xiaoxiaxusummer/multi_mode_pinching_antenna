@@ -11,13 +11,13 @@ The code reproduces the simulation results presented in the paper.
 
 ### Concept of Multi-Mode PASS
 
->Pinching-Antenna Systems (PASS) have recently emerged as a promising architecture for flexible and efficient wireless communications. 
->This work proposes **new operating protocols** and optimization methods for **multi-mode PASS**. 
->- **Multi-mode PASS** allows a single waveguide to excite **multiple propagation modes** to simultaneously serve multiple users. 
->- This enables **mode-domain multiplexing** and offers extra **degrees of freedom (DoFs)**.
->- Compared to conventional PASS, where each waveguide can support only a *single* independent data stream, multi-mode PASS significantly improves spectral efficiency and resource utilization.
+Pinching-Antenna Systems (PASS) have recently emerged as a promising architecture for flexible and efficient wireless communications. 
+**Multi-mode PASS** allows a single waveguide to excite **multiple propagation modes** to simultaneously serve multiple users. 
+- This enables **mode-domain multiplexing** and offers extra **degrees of freedom (DoFs)**.
+- Compared to conventional PASS, where each waveguide can support only a *single* independent data stream, multi-mode PASS significantly improves spectral efficiency and resource utilization.
 
-
+### What is New
+This work proposes **new operating protocols** and optimization methods for **multi-mode PASS**.
 
 **1. Operating Protocols**: Two operating protocols are studied.
 
@@ -32,10 +32,9 @@ This is achieved by continuously tuning the propagation constant $\beta_{n}^{\ma
 > **Uniform Mode Combining**: A practical operating protocol is uniform mode combining,
 > where the propagation constant of each PA can be preconfigued at $\beta=(\beta_{1}+\beta_{2}+...\beta_{M})/M$. Our simulation results demonstrate the efficiency of this design.
 
-**2. Proposed Algorithm**: The paper proposes the **Particle Swarm Optimization with KKT Parameterized Beamforming (PSO-KPBF) Algorithm** to jointly optimize the digital beamforming, pinching locations, and PA propagation constants. 
-
-**KPBF** reconstructs KKT-conditioned beamforming solutions of WMMSE problem, which is parameterized by dual varaiables. 
-Then, PSO jointly predicts KPBF dual parameters, pinching locations, and propagation constants of PAs. 
+**2. Proposed Algorithm**: The paper proposes the **Particle Swarm Optimization with KKT Parameterized Beamforming (PSO-KPBF) Algorithm** to jointly optimize the digital beamforming, pinching locations, and PA propagation constants.
+>**KPBF** reconstructs KKT-conditioned beamforming solutions of WMMSE problem, which is parameterized by dual varaiables. 
+>Then, PSO jointly predicts KPBF dual parameters, pinching locations, and propagation constants of PAs. 
 > **Benefit**:
 >- Reconstructing stationary beamforming solutions without WMMSE iterations in a low-complexity way.
 >- Guiding black-box swarm search by KKT solutions, significantly reducing the searching space. 
