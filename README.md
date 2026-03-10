@@ -11,38 +11,32 @@ The code reproduces the simulation results presented in the paper.
 
 ### Concept of Multi-Mode PASS
 
-Pinching-Antenna Systems (PASS) have recently emerged as a promising architecture for flexible and efficient wireless communications. 
+Pinching-Antenna Systems (PASS) have recently emerged as a promising flexible-antenna technology. 
 **Multi-mode PASS** allows a single waveguide to excite **multiple propagation modes** to simultaneously serve multiple users. 
-- This enables **mode-domain multiplexing** and offers extra **degrees of freedom (DoFs)**.
-- Compared to conventional PASS, where each waveguide can support only a *single* independent data stream, multi-mode PASS significantly improves spectral efficiency and resource utilization.
+- Multi-mode PASS enables **mode-domain multiplexing** and offers extra **degrees of freedom (DoFs)**.
+- Compared to conventional PASS, where each waveguide can support only a *single* independent data stream, spectral efficiency and resource utilization can be significantly improved.
 
-### What is New
-This work proposes **new operating protocols** and optimization methods for **multi-mode PASS**.
-
-**1. Operating Protocols**: Two operating protocols are studied.
-
+### This paper proposes:
+**1.** Two **operating protocols** for multi-mode PASS, which leads to different electromagnetic coupling behaviours.
 - **Mode Selection**: 
-Each pinching antenna (PA) performs phase matching with only a single mode, thus maximizing the coupling strength and radiation power of this selected mode.
-In this case, the propagation constant $\beta_{n}^{\mathrm{PA}}$ of a PA is selected from a discrete set $\\{\beta_{1},\beta_{2},\ldots,\beta_{M}\\}$ of the propagation constants of guided modes.
-
+Each pinching antenna (PA) predominantly radiates power of a single guided mode by performing phase matching with this selected mode to maximize the coupling strength.
+By doing so, the propagation constant $\beta_{n}^{\mathrm{PA}}$ of PA $n$ must be selected from a discrete set $\\{\beta_{1},\beta_{2},\ldots,\beta_{M}\\}$ of the propagation constants of guided modes $m=1,2,\ldots,M$.
 - **Mode Combining**: 
 Each PA can flexbily radiate power of multiple modes without phase matching to a specific mode, thereby fully exploiting mode-domain multiplexing.
-This is achieved by continuously tuning the propagation constant $\beta_{n}^{\mathrm{PA}}$ of each PA.
+This is achieved by continuously tuning $\beta_{n}^{\mathrm{PA}}$ of PA $n$ within range $[\beta_{\min},\beta_{\max}]$.
 
 > **Uniform Mode Combining**: A practical operating protocol is uniform mode combining,
 > where the propagation constant of each PA can be preconfigued at $\beta=(\beta_{1}+\beta_{2}+...\beta_{M})/M$. Our simulation results demonstrate the efficiency of this design.
 
-**2.** The paper proposes the **Particle Swarm Optimization with KKT Parameterized Beamforming (PSO-KPBF)** algorithm to jointly optimize digital beamforming, pinching locations, and PA propagation constants.
->**KPBF** reconstructs KKT-conditioned beamforming solutions of WMMSE problem, which are parameterized by dual varaiables. 
->Then, PSO finds desirable local optima of KPBF dual parameters, pinching locations, and propagation constants of PAs.
->
-> **Benefit**:
+**2.** A **Particle Swarm Optimization with KKT Parameterized Beamforming (PSO-KPBF)** algorithm, which jointly optimizes digital beamforming, pinching locations, and PA propagation constants for sum rate maximization.
+> PSO searches for desirable KPBF dual parameters, pinching locations, and propagation constants of PAs. For each PSO particle, **KPBF** reconstructs KKT-conditioned beamforming using the dual prameters. 
+> It enjoys following **benefits**:
 >- Reconstructing stationary beamforming solutions without WMMSE iterations in a low-complexity way.
 >- Guiding black-box swarm search by KKT solutions, significantly reducing the searching space. 
 
 
 
-## 🚀 Reproducing the Results
+## 🚀 Reproducing Guideline
 
 The repository includes scripts to reproduce the main numerical results from the paper.
 
