@@ -12,7 +12,7 @@ This repository provides the MATLAB implementation of multi-mode pinching-antenn
 PASS place pinching antennas (PAs) along a low-loss dielectric waveguide to radiate signals close to users, thereby significantly shortening propagation distance, reducing large-scale path loss, as well as altering signal phases. 
 
 **Multi-mode PASS** 
-- Allows a single waveguide to excite **multiple electromagnetic modes**. Then, multiple independent data streams can be propagated within one waveguide and radiated by PAs to simultaneously serve multiple users. 
+- Allows a single waveguide to excite **multiple electromagnetic modes**. Then, signals of multiple independent data streams can be propagated within one waveguide and radiated by PAs to simultaneously serve multiple users. 
 - Enables **mode-domain multiplexing** and offers extra **degrees of freedom (DoFs)**.
 - Compared to conventional single-mode PASS, where each waveguide can support only a *single* independent data stream, spectral efficiency and resource utilization can be significantly improved.
 
