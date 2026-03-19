@@ -1,25 +1,25 @@
-# Multi-Mode Pinching-Antenna Systems: Mode Selection or Mode Combining? 
+# Multi-Mode Pinching Antenna Systems: Mode Selection or Mode Combining? 
 
-This repository provides the **MATLAB implementation** for the paper: **Multi-Mode Pinching-Antenna Systems: Mode Selection or Mode Combining?** 
+This repository provides the MATLAB implementation of multi-mode pinching-antenna systems (PASS) and reproduces the simulation results in paper **Multi-Mode Pinching-Antenna Systems: Mode Selection or Mode Combining?** 
 [[arXiv Preprint](https://arxiv.org/abs/2603.08472)] 
-
-The code reproduces the simulation results presented in the paper.
 
 
 
 ## ✨ Key Idea
 
-### Concept of Multi-Mode PASS
+### Concept of Multi-Mode Pinching-Antenna Systems
 
-Pinching-Antenna Systems (PASS) have recently emerged as a promising flexible-antenna technology. 
-**Multi-mode PASS** allows a single waveguide to excite **multiple electromagnetic modes** to simultaneously serve multiple users. 
-- Multi-mode PASS enables **mode-domain multiplexing** and offers extra **degrees of freedom (DoFs)**.
-- Compared to conventional PASS, where each waveguide can support only a *single* independent data stream, spectral efficiency and resource utilization can be significantly improved.
+PASS place pinching antennas (PAs) along a low-loss dielectric waveguide to radiate signals close to users, thereby significantly shortening propagation distance, reducing large-scale path loss, as well as altering signal phases. 
+
+**Multi-mode PASS** 
+- Allows a single waveguide to excite **multiple electromagnetic modes**. Then, multiple independent data streams can be propagated within one waveguide and radiated by PAs to simultaneously serve multiple users. 
+- Enables **mode-domain multiplexing** and offers extra **degrees of freedom (DoFs)**.
+- Compared to conventional single-mode PASS, where each waveguide can support only a *single* independent data stream, spectral efficiency and resource utilization can be significantly improved.
 
 ### This paper proposes:
 **1.** Two **operating protocols** for multi-mode PASS, which leads to different electromagnetic coupling behaviours.
 - **Mode Selection**: 
-Each pinching antenna (PA) predominantly radiates power of a single guided mode by performing phase matching with this selected mode to maximize the coupling strength.
+Each PA predominantly radiates power of a single guided mode by performing phase matching with this selected mode to maximize the coupling strength.
 By doing so, the propagation constant $\beta_{n}^{\mathrm{PA}}$ of PA $n$ must be selected from a discrete set $\\{\beta_{1},\beta_{2},\ldots,\beta_{M}\\}$ of the propagation constants of guided modes $m=1,2,\ldots,M$.
 - **Mode Combining**: 
 Each PA can flexbily radiate power of multiple modes without phase matching to a specific mode, thereby fully exploiting mode-domain multiplexing.
