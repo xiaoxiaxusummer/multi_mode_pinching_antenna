@@ -90,7 +90,7 @@ PSO.vmax_logp        = 0.8;
 PSO.radius           = inf;     % no local clamp
 PSO.warmstart_case2    = true;
 PSO.case2_elite_frac = 0.20;
-% ParBF numerical bounds
+% KPBF numerical bounds
 cfg.lambdaBF_min = 1e-2;
 cfg.lambdaBF_max = 1e2;
 PSO.warmstart_case2      = true;   % Case-2 starts from Case-1 best
@@ -188,7 +188,7 @@ parfor it = 1:test_num
         out2 = pso_KPBF_multiPA_case2_optx_beta_lambda_p(cfg, PSO_local, x_init2, beta_init2, lambda_init2, p_init2);
         r_c2(ip) = out2.best_sr;
 
-        % -------------------- baseline: fixed betaPA = mid --------------------
+        % -------------------- Proposed: (fixed) uniform mode combining  --------------------
         cfg.betaPA_fixed = betaPA_mid * ones(cfg.N,1);
         cfg.betaPA_min = cfg.betaPA_fixed;  % lock
         cfg.betaPA_max = cfg.betaPA_fixed;
@@ -308,7 +308,7 @@ for t=1:PSO.T
     for pp=1:PSO.P
         lambda_vec = exp(clamp_vec(Xl(pp,:), log(cfg.lambdaBF_min), log(cfg.lambdaBF_max))).';
         p_rel = softmax_vec(Xp(pp,:));
-        f = fitness_sumrate_parBF(cfg, Xx(pp,:), Xb(pp,:), lambda_vec, p_rel);
+        f = fitness_sumrate_KPBF(cfg, Xx(pp,:), Xb(pp,:), lambda_vec, p_rel);
 
         if f > pbest_val(pp)
             pbest_val(pp) = f;
@@ -366,7 +366,7 @@ end
 
 best_lambda = exp(clamp_vec(gbest_l, log(cfg.lambdaBF_min), log(cfg.lambdaBF_max))).';
 best_p_rel  = softmax_vec(gbest_p);
-[best_sr, best_W, best_sinr, Heff] = eval_parBF_new(cfg, gbest_x, gbest_b, best_lambda, best_p_rel);
+[best_sr, best_W, best_sinr, Heff] = eval_KPBF_new(cfg, gbest_x, gbest_b, best_lambda, best_p_rel);
 
 out.best_x = gbest_x;
 out.best_betaPA = gbest_b(:);
@@ -465,7 +465,7 @@ for t=1:PSO.T
     for pp=1:PSO.P
         lambda_vec = exp(clamp_vec(Xl(pp,:), log(cfg.lambdaBF_min), log(cfg.lambdaBF_max))).';
         p_rel = softmax_vec(Xp(pp,:));
-        f = fitness_sumrate_parBF(cfg, Xx(pp,:), Xb(pp,:), lambda_vec, p_rel);
+        f = fitness_sumrate_KPBF(cfg, Xx(pp,:), Xb(pp,:), lambda_vec, p_rel);
 
         if f > pbest_val(pp)
             pbest_val(pp) = f;
@@ -523,7 +523,7 @@ end
 
 best_lambda = exp(clamp_vec(gbest_l, log(cfg.lambdaBF_min), log(cfg.lambdaBF_max))).';
 best_p_rel  = softmax_vec(gbest_p);
-[best_sr, best_W, best_sinr, Heff] = eval_parBF_new(cfg, gbest_x, gbest_b, best_lambda, best_p_rel);
+[best_sr, best_W, best_sinr, Heff] = eval_KPBF_new(cfg, gbest_x, gbest_b, best_lambda, best_p_rel);
 
 out.best_x = gbest_x;
 out.best_betaPA = gbest_b(:);
@@ -537,13 +537,13 @@ end
 
 
 
-function f = fitness_sumrate_parBF(cfg, x, betaPA, lambda_vec, p_rel)
-[sumrate,~,~,~] = eval_parBF_new(cfg, x, betaPA, lambda_vec, p_rel);
+function f = fitness_sumrate_KPBF(cfg, x, betaPA, lambda_vec, p_rel)
+[sumrate,~,~,~] = eval_KPBF_new(cfg, x, betaPA, lambda_vec, p_rel);
 f = sumrate;
 end
 
 
-function [sumrate, W, sinr, Heff] = eval_parBF_new(cfg, x, betaPA, lambda_vec, p_rel)
+function [sumrate, W, sinr, Heff] = eval_KPBF_new(cfg, x, betaPA, lambda_vec, p_rel)
 % H: N x K, G: N x M -> Heff = H^H G: K x M
 H = build_H_free(cfg, x);
 G = build_G_multiPA_sequential(cfg, x, betaPA);
@@ -884,7 +884,7 @@ for t=1:PSO.T
     for pp=1:PSO.P
         lambda_vec = exp(clamp_vec(Xl(pp,:), log(cfg.lambdaBF_min), log(cfg.lambdaBF_max))).';
         p_rel = softmax_vec(Xp(pp,:));
-        f = fitness_sumrate_parBF(cfg, Xx(pp,:), beta_fixed_row, lambda_vec, p_rel);
+        f = fitness_sumrate_KPBF(cfg, Xx(pp,:), beta_fixed_row, lambda_vec, p_rel);
 
         if f > pbest_val(pp)
             pbest_val(pp) = f;
