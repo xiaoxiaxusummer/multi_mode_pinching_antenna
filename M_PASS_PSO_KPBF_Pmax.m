@@ -1,5 +1,5 @@
 % ------------------------------------------------------------
-% Multi-mode PASS (dual-mode, multi-PA) simulation:
+% Multi-mode PASS simulation:
 %   Sum-rate vs Pmax for:
 %     Case 1: mode selection
 %     Case 2: mode combining
@@ -8,7 +8,6 @@
 %     (B1) single-mode PASS + TDMA (user1 half-slot, user2 half-slot)
 %     (B2) hybrid beamforming based MISO with N antennas + WMMSE precoding
 % ------------------------------------------------------------
-
 
 clc; clear; close all;
 addpath(genpath(pwd));
@@ -171,7 +170,7 @@ parfor it = 1:test_num
         p_init = ones(cfg.K,1);
         PSO_local = PSO; 
 
-        out1 = pso_parBF_multiPA_case1_optx_beta_lambda_p(cfg, PSO_local, x_init, beta_init, lambda_init, p_init);
+        out1 = pso_KPBF_multiPA_case1_optx_beta_lambda_p(cfg, PSO_local, x_init, beta_init, lambda_init, p_init);
         r_c1(ip) = out1.best_sr;
 
         % -------------------- Proposed: Case 2 --------------------
@@ -186,7 +185,7 @@ parfor it = 1:test_num
             lambda_init2 = ones(cfg.K,1);
             p_init2 = ones(cfg.K,1);
         end
-        out2 = pso_parBF_multiPA_case2_optx_beta_lambda_p(cfg, PSO_local, x_init2, beta_init2, lambda_init2, p_init2);
+        out2 = pso_KPBF_multiPA_case2_optx_beta_lambda_p(cfg, PSO_local, x_init2, beta_init2, lambda_init2, p_init2);
         r_c2(ip) = out2.best_sr;
 
         % -------------------- baseline: fixed betaPA = mid --------------------
@@ -258,7 +257,7 @@ print(gcf,'figs/rate_Pmax_multiPA.pdf','-dpdf','-painters');
 
 
 
-function out = pso_parBF_multiPA_case1_optx_beta_lambda_p(cfg, PSO, x0, beta0, lambda0, p0)
+function out = pso_KPBF_multiPA_case1_optx_beta_lambda_p(cfg, PSO, x0, beta0, lambda0, p0)
 N = cfg.N; K = cfg.K;
 % --- per-variable velocity caps (dimension-aware) ---
 vmax_x   = PSO.vmax_x_factor * abs(cfg.xmax - cfg.xmin);
@@ -381,7 +380,7 @@ end
 
 
 
-function out = pso_parBF_multiPA_case2_optx_beta_lambda_p(cfg, PSO, x0, beta0, lambda0, p0)
+function out = pso_KPBF_multiPA_case2_optx_beta_lambda_p(cfg, PSO, x0, beta0, lambda0, p0)
 N = cfg.N; K = cfg.K;
 
 
@@ -617,7 +616,6 @@ end
 %% ======================================================================
 
 function H = build_H_free(cfg, x)
-% Same as your two-PA code:
 % h_{i,k} = (lambda/(4*pi)) * exp(j k0 R_{i,k}) / R_{i,k}
 I = cfg.N; K = cfg.K;
 H = zeros(I,K);
@@ -730,7 +728,6 @@ function Rtdma = tdma_singlemode_PASS(cfg, x)
 % single-mode PASS + TDMA:
 % slot-1 (1/2 time): use mode-1 only, user-1 only
 % slot-2 (1/2 time): use mode-1 only, user-2 only
-% Use the SAME PA positions x (fair like your two-PA baseline).
 
 % Build full H and G
 R1 = sqrt((x(1)-cfg.a(1))^2 + cfg.y(1)^2 + cfg.hPA^2);
