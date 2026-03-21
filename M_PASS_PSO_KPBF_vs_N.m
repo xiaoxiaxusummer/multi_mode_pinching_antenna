@@ -1,8 +1,7 @@
 % ------------------------------------------------------------
-% Multi-mode PASS (dual-mode, multi-PA) simulation:
+% Multi-mode PASS simulation:
 %   Sum-rate vs number of PAs/antennas N at fixed transmit power.
-%
-% Methods compared (all averaged over Monte-Carlo user drops):
+%   Methods compared (all averaged over Monte-Carlo user drops):
 %   - Proposed Case-1: multi-mode PASS (mode selection) 
 %   - Proposed Case-2: multi-mode PASS (mode combining) 
 %   - Proposed Uniform Mode Combining: fixed PA propagation constant betaPA = (beta1+beta2)/2
@@ -39,7 +38,7 @@ sigma2 = 1e-3 * 10^(sigma2_dBm/10);
 P_tx_dBm = 25;                    
 Pmax = 1e-3 * 10^(P_tx_dBm/10);
 
-%% ====================== Two guided modes (common pair) ======================
+%% ====================== Two guided modes ======================
 epsr_core = 4.0;
 n_core = sqrt(epsr_core);
 n_clad = 1.0;
@@ -92,7 +91,7 @@ PSO = struct();
 % PSO.radius           = inf;     % no local clamp
 % PSO.warmstart_case2    = true;
 % PSO.case2_elite_frac = 0.20;
-% % ParBF numerical bounds
+% % KPBF numerical bounds
 % cfg.lambdaBF_min = 1e-4;
 % cfg.lambdaBF_max = 1e4;
 
@@ -108,7 +107,7 @@ PSO.vmax_logp        = 1;
 PSO.radius           = inf;     % no local clamp
 PSO.warmstart_case2    = true;
 PSO.case2_elite_frac = 0.20;
-% ParBF numerical bounds
+% KPBF numerical bounds
 cfg.lambdaBF_min = 1e-3;
 cfg.lambdaBF_max = 1e3;
 
@@ -180,10 +179,10 @@ for it = 1:test_num
             lambda_init2 = ones(cfg.K,1);
             p_init2 = ones(cfg.K,1);
         end
-        out2 = pso_parBF_multiPA_case2_optx_beta_lambda_p(cfg, PSO_local, x_init2, beta_init2, lambda_init2, p_init2);
+        out2 = pso_KPBF_multiPA_case2_optx_beta_lambda_p(cfg, PSO_local, x_init2, beta_init2, lambda_init2, p_init2);
         R_case2(iN,it) = out2.best_sr;
 
-        % -------------------- baseline: fixed betaPA = mid --------------------
+        % -------------------- Proposed: (fixed) uniform mode combining --------------------
         cfg.betaPA_fixed = betaPA_mid * ones(cfg.N,1);
         cfg.betaPA_min = cfg.betaPA_fixed;  % lock
         cfg.betaPA_max = cfg.betaPA_fixed;
@@ -292,7 +291,7 @@ for t=1:PSO.T
     for pp=1:PSO.P
         lambda_vec = exp(clamp_vec(Xl(pp,:), log(cfg.lambdaBF_min), log(cfg.lambdaBF_max))).';
         p_rel = softmax_vec(Xp(pp,:));
-        f = fitness_sumrate_parBF(cfg, Xx(pp,:), Xb(pp,:), lambda_vec, p_rel);
+        f = fitness_sumrate_KPBF(cfg, Xx(pp,:), Xb(pp,:), lambda_vec, p_rel);
 
         if f > pbest_val(pp)
             pbest_val(pp) = f;
@@ -350,7 +349,7 @@ end
 
 best_lambda = exp(clamp_vec(gbest_l, log(cfg.lambdaBF_min), log(cfg.lambdaBF_max))).';
 best_p_rel  = softmax_vec(gbest_p);
-[best_sr, best_W, best_sinr, Heff] = eval_parBF_new(cfg, gbest_x, gbest_b, best_lambda, best_p_rel);
+[best_sr, best_W, best_sinr, Heff] = eval_KPBF_new(cfg, gbest_x, gbest_b, best_lambda, best_p_rel);
 
 out.best_x = gbest_x;
 out.best_betaPA = gbest_b(:);
@@ -364,7 +363,7 @@ end
 
 
 
-function out = pso_parBF_multiPA_case2_optx_beta_lambda_p(cfg, PSO, x0, beta0, lambda0, p0)
+function out = pso_KPBF_multiPA_case2_optx_beta_lambda_p(cfg, PSO, x0, beta0, lambda0, p0)
 % Case-2: PSO jointly optimizes x, betaPA, lambda_k, p_k, with an "elite + random" initialization:
 %   - First Ne elite particles: jittered warm-start around the provided (x0,beta0,lambda0,p0)
 %                             (typically Case-1 best), to refine the known good basin.
@@ -456,7 +455,7 @@ for t=1:PSO.T
     for pp=1:PSO.P
         lambda_vec = exp(clamp_vec(Xl(pp,:), log(cfg.lambdaBF_min), log(cfg.lambdaBF_max))).';
         p_rel = softmax_vec(Xp(pp,:));
-        f = fitness_sumrate_parBF(cfg, Xx(pp,:), Xb(pp,:), lambda_vec, p_rel);
+        f = fitness_sumrate_KPBF(cfg, Xx(pp,:), Xb(pp,:), lambda_vec, p_rel);
 
         if f > pbest_val(pp)
             pbest_val(pp) = f;
@@ -514,7 +513,7 @@ end
 
 best_lambda = exp(clamp_vec(gbest_l, log(cfg.lambdaBF_min), log(cfg.lambdaBF_max))).';
 best_p_rel  = softmax_vec(gbest_p);
-[best_sr, best_W, best_sinr, Heff] = eval_parBF_new(cfg, gbest_x, gbest_b, best_lambda, best_p_rel);
+[best_sr, best_W, best_sinr, Heff] = eval_KPBF_new(cfg, gbest_x, gbest_b, best_lambda, best_p_rel);
 
 out.best_x = gbest_x;
 out.best_betaPA = gbest_b(:);
@@ -528,13 +527,13 @@ end
 
 
 
-function f = fitness_sumrate_parBF(cfg, x, betaPA, lambda_vec, p_rel)
-[sumrate,~,~,~] = eval_parBF_new(cfg, x, betaPA, lambda_vec, p_rel);
+function f = fitness_sumrate_KPBF(cfg, x, betaPA, lambda_vec, p_rel)
+[sumrate,~,~,~] = eval_KPBF_new(cfg, x, betaPA, lambda_vec, p_rel);
 f = sumrate;
 end
 
 
-function [sumrate, W, sinr, Heff] = eval_parBF_new(cfg, x, betaPA, lambda_vec, p_rel)
+function [sumrate, W, sinr, Heff] = eval_KPBF_new(cfg, x, betaPA, lambda_vec, p_rel)
 % H: N x K, G: N x M -> Heff = H^H G: K x M
 H = build_H_free(cfg, x);
 G = build_G_multiPA_sequential(cfg, x, betaPA);
@@ -714,8 +713,6 @@ function Rtdma = tdma_singlemode_PASS(cfg, x)
 % single-mode PASS + TDMA:
 % slot-1 (1/2 time): use mode-1 only, user-1 only
 % slot-2 (1/2 time): use mode-1 only, user-2 only
-% Use the SAME PA positions x (fair like your two-PA baseline).
-
 % Build full H and G
 % Heff = build_H_free_same_law(cfg, x);
 % G = build_G_multiPA_CMT(cfg, x);
@@ -868,7 +865,7 @@ for t=1:PSO.T
     for pp=1:PSO.P
         lambda_vec = exp(clamp_vec(Xl(pp,:), log(cfg.lambdaBF_min), log(cfg.lambdaBF_max))).';
         p_rel = softmax_vec(Xp(pp,:));
-        f = fitness_sumrate_parBF(cfg, Xx(pp,:), beta_fixed_row, lambda_vec, p_rel);
+        f = fitness_sumrate_KPBF(cfg, Xx(pp,:), beta_fixed_row, lambda_vec, p_rel);
 
         if f > pbest_val(pp)
             pbest_val(pp) = f;
