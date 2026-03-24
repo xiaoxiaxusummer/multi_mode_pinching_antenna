@@ -3,11 +3,13 @@
 %   Sum-rate vs Pmax for:
 %     Case 1: mode selection
 %     Case 2: mode combining
+%             uniform mode combining
 %   Proposed algorithm: PSO-KPBF
 %   Baselines:
-%     (B1) single-mode PASS + TDMA (user1 half-slot, user2 half-slot)
-%     (B2) hybrid beamforming based MISO with N antennas + WMMSE precoding
+%     (B1) single-mode PASS + TDMA (mode1->user1 half-slot, mode2->user2 half-slot)
+%     (B2) hybrid beamforming based MISO with N antennas
 % ------------------------------------------------------------
+
 
 clc; clear; close all;
 addpath(genpath(pwd));
@@ -73,7 +75,7 @@ end
 %% ====================== PASS config ======================
 K = 2; % number of users
 M = 2; % number of modes
-N  = 8; % total PAs
+N  = 4; % total PAs
 
 
 %% ====================== PSO params ======================
@@ -90,22 +92,26 @@ PSO.vmax_logp        = 0.8;
 PSO.radius           = inf;     % no local clamp
 PSO.warmstart_case2    = true;
 PSO.case2_elite_frac = 0.20;
-% KPBF numerical bounds
+% ParBF numerical bounds
 cfg.lambdaBF_min = 1e-2;
 cfg.lambdaBF_max = 1e2;
-PSO.warmstart_case2      = true;   % Case-2 starts from Case-1 best
-PSO.radius               = inf;    % set to finite value (e.g., 10) to re-enable local search around init
-PSO.case2_elite_frac     = 0.2;
 
-%% ====================== Fixed MIMO baseline (I antennas) ======================
-% N antennas with half-wavelength spacing
+% CASE-1 vs CASE-2 COMPARISON:
+% PSO.warmstart_case2      = false;  %true;   % Case-2 starts from Case-1 best
+% PSO.radius               = inf;    % set to finite value (e.g., 10) to re-enable local search around init
+% Case-2 mixed init: use a small elite set around Case-1 best + remaining random.
+% Typical values: 0.05~0.10.
+% PSO.case2_elite_frac     = 0.2;
+
+%% ====================== Fixed MIMO baseline (N antennas) ======================
+% N antennas along x-axis from (0,0,hPA) with half-wavelength spacing
 N_MIMO_1 = N;
 tx_pos_1 = zeros(N,3);
 for i=1:N_MIMO_1
     tx_pos_1(i,:) = [(i-1)*dmin, 0, hPA];
 end
 
-N_MIMO_2 = 16;
+N_MIMO_2 = 8;
 tx_pos_2 = zeros(N,3);
 for i=1:N_MIMO_2
     tx_pos_2(i,:) = [(i-1)*dmin, 0, hPA];
@@ -123,7 +129,7 @@ a_all = x_user_min*ones(2,test_num) + rand(2,test_num)*(Lwg-x_user_min);
 y_all = rand(2,test_num)*5;
 
 % Prepare independent random streams for PSO randomness inside each trial
-streams = RandStream.create('Threefry','NumStreams',test_num,'Seed',baseSeed+100);
+stream = parallel.pool.Constant(@() RandStream('Threefry','Seed',baseSeed));
 
 % Uniform mode combining
 betaPA_mid = (beta1 + beta2)/2;
@@ -137,6 +143,10 @@ R_mimo_hybrid_1 = zeros(numel(Pmax_list), test_num);
 R_mimo_hybrid_2 = zeros(numel(Pmax_list), test_num);
 
 parfor it = 1:test_num
+    
+    % reset seed
+    s = stream.Value; RandStream.setGlobalStream(s);
+
     a = [min(a_all(:,it)); max(a_all(:,it))]; % user x
     y = y_all(:,it);                          % user y
 
@@ -170,7 +180,7 @@ parfor it = 1:test_num
         p_init = ones(cfg.K,1);
         PSO_local = PSO; 
 
-        out1 = pso_KPBF_multiPA_case1_optx_beta_lambda_p(cfg, PSO_local, x_init, beta_init, lambda_init, p_init);
+        out1 = pso_parBF_multiPA_case1_optx_beta_lambda_p(cfg, PSO_local, x_init, beta_init, lambda_init, p_init);
         r_c1(ip) = out1.best_sr;
 
         % -------------------- Proposed: Case 2 --------------------
@@ -185,32 +195,30 @@ parfor it = 1:test_num
             lambda_init2 = ones(cfg.K,1);
             p_init2 = ones(cfg.K,1);
         end
-        out2 = pso_KPBF_multiPA_case2_optx_beta_lambda_p(cfg, PSO_local, x_init2, beta_init2, lambda_init2, p_init2);
+        out2 = pso_parBF_multiPA_case2_optx_beta_lambda_p(cfg, PSO_local, x_init2, beta_init2, lambda_init2, p_init2);
         r_c2(ip) = out2.best_sr;
 
-        % -------------------- Proposed: (fixed) uniform mode combining  --------------------
+        % -------------------- Proposed uniform mode combining (betaPA = (\beta_1+\beta_2)/2) --------------------
         cfg.betaPA_fixed = betaPA_mid * ones(cfg.N,1);
         cfg.betaPA_min = cfg.betaPA_fixed;  % lock
         cfg.betaPA_max = cfg.betaPA_fixed;
-
-        % Baseline for fixed betaPA
         out_mid = pso_KPBF_multiPA_optx_lambda_p_fixedbeta(cfg, PSO_local, x_init, lambda_init, p_init);
         r_cm(ip) = out_mid.best_sr;
 
-        % -------------------- TDMA baseline --------------------
+        % -------------------- TDMA-based single-mode PASS baseline --------------------
         x_TDMA = cfg.a;
         r_td(ip) = tdma_singlemode_PASS(cfg, x_TDMA);
 
         % -------------------- Conventional MISO (Hybrid BF) baselines --------------------
         Hmimo = build_H_miso(cfg, tx_pos_1(:,1));   % I x K
-        [~, F_RF_best, F_BB_best] = hybridBF_MIMO(Hmimo, Pmax, sigma2);
+        [~, F_RF_best, F_BB_best] = hybrid_wmmse_rate_max(Hmimo, Pmax, sigma2);
         r_m1(ip) = sumrate_from_HW(Hmimo, F_RF_best*F_BB_best, sigma2);
 
         Hmimo = build_H_miso(cfg, tx_pos_2(:,1));   % I x K
-        [~, F_RF_best, F_BB_best] = hybridBF_MIMO(Hmimo, Pmax, sigma2);
+        [~, F_RF_best, F_BB_best] = hybrid_wmmse_rate_max(Hmimo, Pmax, sigma2);
         r_m2(ip) = sumrate_from_HW(Hmimo, F_RF_best*F_BB_best, sigma2);
 
-        fprintf('[it=%02d] Pmax=%4.1f dBm: C1=%.3f, C2=%.3f, C1-mid=%.3f, TDMA=%.3f, MISO8=%.3f, MISO16=%.3f\n', ...
+        fprintf('[it=%02d] Pmax=%4.1f dBm: C1=%.3f, C2=%.3f, C1-mid=%.3f, TDMA=%.3f, MISO4=%.3f, MISO8=%.3f\n', ...
             it, Pmax_dBm_list(ip), r_c1(ip), r_c2(ip), r_cm(ip), r_td(ip), r_m1(ip), r_m2(ip));
     end
 
@@ -242,14 +250,14 @@ legend({ ...
     'Prop. multi-mode PASS (mode combining)', ...
     'Prop. multi-mode PASS (uniform mode combining)', ...
     'Single-mode PASS (TDMA)', ...
-    'Conventional MISO (Hybrid BF, N=8)', ...
-    'Conventional MISO (Hybrid BF, N=16)' ...
+    'Conventional MISO (Hybrid BF, N=4)', ...
+    'Conventional MISO (Hybrid BF, N=8)' ...
     }, 'Location','best');
 
 set(gcf, 'PaperUnits', 'centimeters', 'PaperSize', [22, 16], 'PaperPositionMode','auto','Renderer','painters');
 set(gca,'FontSize',14,'FontName','Times New Roman');
-savefig('figs/rate_Pmax_multiPA.fig');
-print(gcf,'figs/rate_Pmax_multiPA.pdf','-dpdf','-painters');
+savefig('figs/rate_vs_Pmax.fig');
+print(gcf,'figs/rate_vs_Pmax.pdf','-dpdf','-painters');
 
 %% ======================================================================
 %% =================== Proposed: PSO-KPBF ====================
@@ -257,14 +265,12 @@ print(gcf,'figs/rate_Pmax_multiPA.pdf','-dpdf','-painters');
 
 
 
-function out = pso_KPBF_multiPA_case1_optx_beta_lambda_p(cfg, PSO, x0, beta0, lambda0, p0)
+function out = pso_parBF_multiPA_case1_optx_beta_lambda_p(cfg, PSO, x0, beta0, lambda0, p0)
 N = cfg.N; K = cfg.K;
-% --- per-variable velocity caps (dimension-aware) ---
 vmax_x   = PSO.vmax_x_factor * abs(cfg.xmax - cfg.xmin);
 vmax_beta= PSO.vmax_beta_factor * abs(cfg.beta(2)-cfg.beta(1)) + 1e-9;
 vmax_ll  = PSO.vmax_loglambda;
 vmax_lp  = PSO.vmax_logp;
-% lambda bounds (for numerical stability)
 if ~isfield(cfg,'lambdaBF_min') || isempty(cfg.lambdaBF_min), cfg.lambdaBF_min = 1e-4; end
 if ~isfield(cfg,'lambdaBF_max') || isempty(cfg.lambdaBF_max), cfg.lambdaBF_max = 1e4;  end
 
@@ -272,8 +278,7 @@ Xx = zeros(PSO.P, N); Vx = zeros(PSO.P, N);
 Xb = zeros(PSO.P, N); Vb = zeros(PSO.P, N);
 Xl = zeros(PSO.P, K); Vl = zeros(PSO.P, K);
 Xp = zeros(PSO.P, K); Vp = zeros(PSO.P, K);
-Xx0 = repmat(x0(:).', PSO.P, 1); % common clamp center (original behavior)
-Xx0 = zeros(PSO.P, N); % per-particle init center for optional radius clamp
+Xx0 = zeros(PSO.P, N);
 
 for pp=1:PSO.P
     % x init
@@ -308,7 +313,7 @@ for t=1:PSO.T
     for pp=1:PSO.P
         lambda_vec = exp(clamp_vec(Xl(pp,:), log(cfg.lambdaBF_min), log(cfg.lambdaBF_max))).';
         p_rel = softmax_vec(Xp(pp,:));
-        f = fitness_sumrate_KPBF(cfg, Xx(pp,:), Xb(pp,:), lambda_vec, p_rel);
+        f = fitness_sumrate_parBF(cfg, Xx(pp,:), Xb(pp,:), lambda_vec, p_rel);
 
         if f > pbest_val(pp)
             pbest_val(pp) = f;
@@ -366,7 +371,7 @@ end
 
 best_lambda = exp(clamp_vec(gbest_l, log(cfg.lambdaBF_min), log(cfg.lambdaBF_max))).';
 best_p_rel  = softmax_vec(gbest_p);
-[best_sr, best_W, best_sinr, Heff] = eval_KPBF_new(cfg, gbest_x, gbest_b, best_lambda, best_p_rel);
+[best_sr, best_W, best_sinr, Heff] = eval_parBF_new(cfg, gbest_x, gbest_b, best_lambda, best_p_rel);
 
 out.best_x = gbest_x;
 out.best_betaPA = gbest_b(:);
@@ -380,7 +385,7 @@ end
 
 
 
-function out = pso_KPBF_multiPA_case2_optx_beta_lambda_p(cfg, PSO, x0, beta0, lambda0, p0)
+function out = pso_parBF_multiPA_case2_optx_beta_lambda_p(cfg, PSO, x0, beta0, lambda0, p0)
 N = cfg.N; K = cfg.K;
 
 
@@ -465,7 +470,7 @@ for t=1:PSO.T
     for pp=1:PSO.P
         lambda_vec = exp(clamp_vec(Xl(pp,:), log(cfg.lambdaBF_min), log(cfg.lambdaBF_max))).';
         p_rel = softmax_vec(Xp(pp,:));
-        f = fitness_sumrate_KPBF(cfg, Xx(pp,:), Xb(pp,:), lambda_vec, p_rel);
+        f = fitness_sumrate_parBF(cfg, Xx(pp,:), Xb(pp,:), lambda_vec, p_rel);
 
         if f > pbest_val(pp)
             pbest_val(pp) = f;
@@ -523,7 +528,7 @@ end
 
 best_lambda = exp(clamp_vec(gbest_l, log(cfg.lambdaBF_min), log(cfg.lambdaBF_max))).';
 best_p_rel  = softmax_vec(gbest_p);
-[best_sr, best_W, best_sinr, Heff] = eval_KPBF_new(cfg, gbest_x, gbest_b, best_lambda, best_p_rel);
+[best_sr, best_W, best_sinr, Heff] = eval_parBF_new(cfg, gbest_x, gbest_b, best_lambda, best_p_rel);
 
 out.best_x = gbest_x;
 out.best_betaPA = gbest_b(:);
@@ -537,13 +542,13 @@ end
 
 
 
-function f = fitness_sumrate_KPBF(cfg, x, betaPA, lambda_vec, p_rel)
-[sumrate,~,~,~] = eval_KPBF_new(cfg, x, betaPA, lambda_vec, p_rel);
+function f = fitness_sumrate_parBF(cfg, x, betaPA, lambda_vec, p_rel)
+[sumrate,~,~,~] = eval_parBF_new(cfg, x, betaPA, lambda_vec, p_rel);
 f = sumrate;
 end
 
 
-function [sumrate, W, sinr, Heff] = eval_KPBF_new(cfg, x, betaPA, lambda_vec, p_rel)
+function [sumrate, W, sinr, Heff] = eval_parBF_new(cfg, x, betaPA, lambda_vec, p_rel)
 % H: N x K, G: N x M -> Heff = H^H G: K x M
 H = build_H_free(cfg, x);
 G = build_G_multiPA_sequential(cfg, x, betaPA);
@@ -616,7 +621,6 @@ end
 %% ======================================================================
 
 function H = build_H_free(cfg, x)
-% h_{i,k} = (lambda/(4*pi)) * exp(j k0 R_{i,k}) / R_{i,k}
 I = cfg.N; K = cfg.K;
 H = zeros(I,K);
 for i=1:I
@@ -834,14 +838,14 @@ end
 
 
 %% ======================================================================
-%% =============== Baseline: PSO-Parameterized BF (fixed betaPA) =========
+%% ================= PSO-KPBF for fixed uniform mode combining ==========
 %% ======================================================================
 
 function out = pso_KPBF_multiPA_optx_lambda_p_fixedbeta(cfg, PSO, x0, lambda0, p0)
 N = cfg.N; K = cfg.K;
 
 assert(isfield(cfg,'betaPA_fixed') && ~isempty(cfg.betaPA_fixed), ...
-    'cfg.betaPA_fixed must be provided for fixed-betaPA baseline.');
+    'cfg.betaPA_fixed must be provided for uniform mode combining.');
 
 % velocity caps
 vmax_x   = PSO.vmax_x_factor * abs(cfg.xmax - cfg.xmin);
@@ -884,7 +888,7 @@ for t=1:PSO.T
     for pp=1:PSO.P
         lambda_vec = exp(clamp_vec(Xl(pp,:), log(cfg.lambdaBF_min), log(cfg.lambdaBF_max))).';
         p_rel = softmax_vec(Xp(pp,:));
-        f = fitness_sumrate_KPBF(cfg, Xx(pp,:), beta_fixed_row, lambda_vec, p_rel);
+        f = fitness_sumrate_parBF(cfg, Xx(pp,:), beta_fixed_row, lambda_vec, p_rel);
 
         if f > pbest_val(pp)
             pbest_val(pp) = f;

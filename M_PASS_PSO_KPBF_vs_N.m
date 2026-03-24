@@ -1,12 +1,13 @@
 % ------------------------------------------------------------
-% Multi-mode PASS simulation:
+% Multi-mode PASS (dual-mode, multi-PA) simulation:
 %   Sum-rate vs number of PAs/antennas N at fixed transmit power.
-%   Methods compared (all averaged over Monte-Carlo user drops):
+%
+% Methods compared (all averaged over Monte-Carlo drops):
 %   - Proposed Case-1: multi-mode PASS (mode selection) 
 %   - Proposed Case-2: multi-mode PASS (mode combining) 
-%   - Proposed Uniform Mode Combining: fixed PA propagation constant betaPA = (beta1+beta2)/2
+%   - Proposed fixed uniform mode combining betaPA = (beta1+beta2)/2
 %   - Baseline: single-mode PASS + TDMA
-%   - Baseline: conventional MISO with I antennas + Hybrid BF (RF+BB)
+%   - Baseline: conventional MISO with N antennas + Hybrid BF (RF+BB)
 % ------------------------------------------------------------
 
 clc; clear; close all;
@@ -38,7 +39,7 @@ sigma2 = 1e-3 * 10^(sigma2_dBm/10);
 P_tx_dBm = 25;                    
 Pmax = 1e-3 * 10^(P_tx_dBm/10);
 
-%% ====================== Two guided modes ======================
+%% ====================== Two guided modes (common pair) ======================
 epsr_core = 4.0;
 n_core = sqrt(epsr_core);
 n_clad = 1.0;
@@ -107,7 +108,6 @@ PSO.vmax_logp        = 1;
 PSO.radius           = inf;     % no local clamp
 PSO.warmstart_case2    = true;
 PSO.case2_elite_frac = 0.20;
-% KPBF numerical bounds
 cfg.lambdaBF_min = 1e-3;
 cfg.lambdaBF_max = 1e3;
 
@@ -119,8 +119,8 @@ rng(baseSeed,'twister');
 x_user_min = 5;
 a_all = x_user_min*ones(2,test_num) + rand(2,test_num)*(Lwg-x_user_min);
 y_all = rand(2,test_num)*5;
-% Uniform mode combining
-betaPA_mid = (beta1 + beta2)/2;
+betaPA_mid = (beta1 + beta2)/2; % Uniform mode combining
+
 % Result arrays (I x trial)
 R_case1 = zeros(numel(N_list), test_num);
 R_case2 = zeros(numel(N_list), test_num);
@@ -128,18 +128,23 @@ R_midbeta = zeros(numel(N_list), test_num);
 R_tdma1 = zeros(numel(N_list), test_num);
 R_mimo_hybrid = zeros(numel(N_list), test_num);
 
+% random seeds
+stream = parallel.pool.Constant(@() RandStream('Threefry','Seed',baseSeed));
 for it = 1:test_num
     a = a_all(:,it);                          % user x 
     y = y_all(:,it);                          % user y
     
     parfor iN = 1:numel(N_list)
-    % for iN = 1:numel(N_list)
+        
+        % reset seed
+        s = stream.Value; RandStream.setGlobalStream(s);
+
         N = N_list(iN);
 
         x_arr = dmin*(0:1:N-1);
         tx_pos = [x_arr(:), zeros(N,1), hPA*ones(N,1)];
 
-        % D = 0.2;   % fixed aperture for fixed MIMO
+        % D = 0.2;   % fixed aperture, e.g., 10 cm
         % x_arr = linspace(-D/2, D/2, N);
         % tx_pos = [x_arr(:), zeros(N,1), hPA*ones(N,1)];
 
@@ -150,7 +155,7 @@ for it = 1:test_num
         cfg.Pmax=Pmax; cfg.sigma2=sigma2; 
         cfg.N=N; cfg.K=K; cfg.M=M;
         cfg.Lpa=Lpa;
-        cfg.kappa_fixed = (pi/6)/cfg.Lpa;  % sin(kappa*Lpa)=sin(pi/6)=0.5 is the maximum radiation ratio
+        cfg.kappa_fixed = (pi/6)/cfg.Lpa;  % sin(kappa*Lpa)=sin(pi/6)=0.5
 
         cfg.kappa_match = cfg.kappa_fixed;
 
@@ -193,14 +198,13 @@ for it = 1:test_num
         out_mid = pso_KPBF_multiPA_optx_lambda_p_fixedbeta(cfg, PSO_local, x_init, lambda_init, p_init);
         R_midbeta(iN,it) = out_mid.best_sr;
 
-        % -------------------- TDMA baseline --------------------
+        % -------------------- TDMA-based single-mode PASS baseline --------------------
         x_TDMA = cfg.a;
         R_tdma1(iN,it) = tdma_singlemode_PASS(cfg, x_TDMA);
 
         % -------------------- Conventional MISO (Hybrid BF) baseline --------------------
-        % Hmimo = build_H_free(cfg,tx_pos(:,1));
         Hmimo = build_H_miso(cfg,tx_pos(:,1));
-        [~, F_RF_best, F_BB_best] = hybridBF_MIMO(Hmimo, Pmax, sigma2);
+        [~, F_RF_best, F_BB_best] = hybrid_wmmse_rate_max(Hmimo, Pmax, sigma2);
         R_mimo_hybrid(iN,it) = sumrate_from_HW(Hmimo, F_RF_best*F_BB_best, sigma2);
 
         fprintf('[it=%02d/%02d] N=%2d, Ptx=%4.1f: C1=%.3f, C2=%.3f, C1-mid=%.3f, TDMA=%.3f, MISO=%.3f\n', ...
@@ -210,20 +214,20 @@ end
 
 %% ====================== Plot ======================
 figure('Color',[1,1,1]); hold on; box on;
-plot(N_list, mean(R_case1,2), '--ob', 'LineWidth', 2.5);
-plot(N_list, mean(R_case2,2), '-sb', 'LineWidth', 2.5);
-plot(N_list, mean(R_midbeta,2), '--hb', 'LineWidth', 2.5);
-plot(N_list, mean(R_tdma1,2), '-.^r', 'LineWidth', 2.5);
-plot(N_list, mean(R_mimo_hybrid,2), '-dk', 'LineWidth', 2.5);
+colors = {'blue', [0, 0.5, 0], [.64, .08, .18], [.25, .25, .25]};
+plot(N_list, mean(R_case1,2), '--o', colors{1}, 'LineWidth', 2.5);
+plot(N_list, mean(R_case2,2), '-s', colors{1}, 'LineWidth', 2.5);
+plot(N_list, mean(R_midbeta,2), ':h', colors{1}, 'LineWidth', 2.5);
+plot(N_list, mean(R_tdma1,2), '-.^', colors{2}, 'LineWidth', 2.5);
+plot(N_list, mean(R_mimo_hybrid,2), '-d', colors{3}, 'LineWidth', 2.5);
 
 xlabel('Number of PAs / antennas, I','Interpreter','latex');
 ylabel('Sum rate (bps/Hz)','Interpreter','latex');
-% title(sprintf('Dual-mode PASS @ %.0f GHz, $P_{tx}$ = %.1f dBm', fc/1e9, P_tx_dBm), 'Interpreter','latex');
 
 legend({ ...
-    'Multi-mode PASS (mode selection)', ...
-    'Multi-mode PASS (mode combining)', ...
-    'Multi-mode PASS (uniform mode combining)', ...
+    'Prop. multi-mode PASS (mode selection)', ...
+    'Prop. multi-mode PASS (mode combining)', ...
+    'Prop. multi-mode PASS (uniform mode combining)', ...
     'Single-mode PASS (TDMA)', ...
     'Conventional MISO (Hybrid BF)' ...
     }, 'Location','best');
@@ -232,12 +236,11 @@ set(gcf, 'PaperUnits', 'centimeters', 'PaperSize', [22, 16], 'PaperPositionMode'
 set(gca,'FontSize',14,'FontName','Times New Roman');
 
 if ~exist('figs','dir'), mkdir('figs'); end
-savefig(sprintf('figs/rate_N_Ptx%.0fdBm_multiPA.fig', P_tx_dBm));
-print(gcf, sprintf('figs/rate_N_Ptx%.0fdBm_multiPA.pdf', P_tx_dBm), '-dpdf','-painters');
+savefig('figs/rate_vs_N.fig');
+print(gcf, 'figs/rate_vs_N.pdf', '-dpdf','-painters');
 
 % Save raw data
-save(sprintf('figs/rate_N_Ptx%.0fdBm.mat', P_tx_dBm), ...
-    'N_list','P_tx_dBm','Pmax','R_case1','R_case2','R_midbeta','R_tdma1','R_mimo_hybrid');
+save('figs/rate_vs_N.mat');
 
 function out = pso_KPBF_multiPA_case1_optx_beta_lambda_p(cfg, PSO, x0, beta0, lambda0, p0)
 N = cfg.N; K = cfg.K;
@@ -254,9 +257,7 @@ Xx = zeros(PSO.P, N); Vx = zeros(PSO.P, N);
 Xb = zeros(PSO.P, N); Vb = zeros(PSO.P, N);
 Xl = zeros(PSO.P, K); Vl = zeros(PSO.P, K);
 Xp = zeros(PSO.P, K); Vp = zeros(PSO.P, K);
-Xx0 = repmat(x0(:).', PSO.P, 1); % common clamp center (original behavior)
-
-Xx0 = zeros(PSO.P, N); % per-particle init center for optional radius clamp
+Xx0 = zeros(PSO.P, N);
 
 for pp=1:PSO.P
     % x init
@@ -364,30 +365,21 @@ end
 
 
 function out = pso_KPBF_multiPA_case2_optx_beta_lambda_p(cfg, PSO, x0, beta0, lambda0, p0)
-% Case-2: PSO jointly optimizes x, betaPA, lambda_k, p_k, with an "elite + random" initialization:
-%   - First Ne elite particles: jittered warm-start around the provided (x0,beta0,lambda0,p0)
-%                             (typically Case-1 best), to refine the known good basin.
-%   - Remaining particles: random initialization for global exploration.
-%
-% This is usually better than "all warm-start" (swarm collapse) or "all random" (no baseline).
-
-I = cfg.N; K = cfg.K;
-
+N = cfg.N; K = cfg.K;
 
 % --- per-variable velocity caps (dimension-aware) ---
 vmax_x   = PSO.vmax_x_factor * cfg.lambda;
 vmax_beta= PSO.vmax_beta_factor * abs(cfg.beta(2)-cfg.beta(1)) + 1e-9;
 vmax_ll  = PSO.vmax_loglambda;
 vmax_lp  = PSO.vmax_logp;
-% lambda bounds (for numerical stability)
 if ~isfield(cfg,'lambdaBF_min') || isempty(cfg.lambdaBF_min), cfg.lambdaBF_min = 1e-4; end
 if ~isfield(cfg,'lambdaBF_max') || isempty(cfg.lambdaBF_max), cfg.lambdaBF_max = 1e4;  end
 
-Xx = zeros(PSO.P, I); Vx = zeros(PSO.P, I);
-Xb = zeros(PSO.P, I); Vb = zeros(PSO.P, I);
+Xx = zeros(PSO.P, N); Vx = zeros(PSO.P, N);
+Xb = zeros(PSO.P, N); Vb = zeros(PSO.P, N);
 Xl = zeros(PSO.P, K); Vl = zeros(PSO.P, K);
 Xp = zeros(PSO.P, K); Vp = zeros(PSO.P, K);
-Xx0 = zeros(PSO.P, I); % per-particle init center for optional radius clamp
+Xx0 = zeros(PSO.P, N); 
 
 % ---- Elite warm-start particles (jittered around x0/beta0/lambda0/p0) ----
 if ~isfield(PSO,'case2_elite_frac') || isempty(PSO.case2_elite_frac)
@@ -402,15 +394,15 @@ zP0 = log(p0v(:).');
 
 for pp = 1:Ne
     % x
-    jitter_x = (2*rand(1,I)-1) * (0.15*cfg.lambda);
+    jitter_x = (2*rand(1,N)-1) * (0.15*cfg.lambda);
     Xx(pp,:) = proj_and_repair(x0(:).' + jitter_x, cfg.xmin, cfg.xmax, cfg.dmin);
     Xx0(pp,:) = Xx(pp,:);
-    Vx(pp,:) = (2*rand(1,I)-1) * (0.05*cfg.lambda);
+    Vx(pp,:) = (2*rand(1,N)-1) * (0.05*cfg.lambda);
 
     % betaPA
-    jitter_b = (2*rand(1,I)-1) .* (0.03*abs(cfg.beta(2)-cfg.beta(1)) + 1e-9);
+    jitter_b = (2*rand(1,N)-1) .* (0.03*abs(cfg.beta(2)-cfg.beta(1)) + 1e-9);
     Xb(pp,:) = clamp_vec(beta0(:).' + jitter_b, cfg.betaPA_min, cfg.betaPA_max);
-    Vb(pp,:) = (2*rand(1,I)-1) .* (0.015*abs(cfg.beta(2)-cfg.beta(1)) + 1e-9);
+    Vb(pp,:) = (2*rand(1,N)-1) .* (0.015*abs(cfg.beta(2)-cfg.beta(1)) + 1e-9);
 
     % lambda (log-domain)
     Xl(pp,:) = z0 + (2*rand(1,K)-1)*0.10;
@@ -425,16 +417,16 @@ end
 for pp=(Ne+1):PSO.P
     % x random
     x_rand = init_random_allx(cfg);
-    jitter_x = (2*rand(1,I)-1) * (0.5*cfg.lambda);
+    jitter_x = (2*rand(1,N)-1) * (0.5*cfg.lambda);
     Xx(pp,:) = proj_and_repair(x_rand(:).' + jitter_x, cfg.xmin, cfg.xmax, cfg.dmin);
     Xx0(pp,:) = Xx(pp,:);
-    Vx(pp,:) = (2*rand(1,I)-1) * (0.1*cfg.lambda);
+    Vx(pp,:) = (2*rand(1,N)-1) * (0.1*cfg.lambda);
 
     % betaPA random
-    b_rand = cfg.betaPA_min + rand(1,I).*(cfg.betaPA_max - cfg.betaPA_min);
-    jitter_b = (2*rand(1,I)-1) .* (0.05*abs(cfg.beta(2)-cfg.beta(1)) + 1e-9);
+    b_rand = cfg.betaPA_min + rand(1,N).*(cfg.betaPA_max - cfg.betaPA_min);
+    jitter_b = (2*rand(1,N)-1) .* (0.05*abs(cfg.beta(2)-cfg.beta(1)) + 1e-9);
     Xb(pp,:) = clamp_vec(b_rand + jitter_b, cfg.betaPA_min, cfg.betaPA_max);
-    Vb(pp,:) = (2*rand(1,I)-1) .* (0.02*abs(cfg.beta(2)-cfg.beta(1)) + 1e-9);
+    Vb(pp,:) = (2*rand(1,N)-1) .* (0.02*abs(cfg.beta(2)-cfg.beta(1)) + 1e-9);
 
     % lambda random (log-domain)
     l_rand = cfg.lambdaBF_min * (cfg.lambdaBF_max/cfg.lambdaBF_min) .^ rand(1,K); % log-uniform
@@ -474,7 +466,7 @@ for t=1:PSO.T
     end
 
     for pp=1:PSO.P
-        r1x = rand(1,I); r2x = rand(1,I);
+        r1x = rand(1,N); r2x = rand(1,N);
         r1k = rand(1,K); r2k = rand(1,K);
 
         % ---- x update ----
@@ -607,7 +599,6 @@ end
 %% ======================================================================
 
 function H = build_H_free(cfg, x)
-% h_{i,k} = (lambda/(4*pi)) * exp(j k0 R_{i,k}) / R_{i,k}
 N = cfg.N; K = cfg.K;
 H = zeros(N,K);
 for i=1:N
@@ -619,12 +610,12 @@ end
 end
 
 function H = build_H_miso(cfg, tx)
-% Fair compact-array MISO channel:
+% MISO channel:
 % common path loss from array centroid + exact spherical-wave phase
 
-I = numel(tx);
+N = numel(tx);
 K = cfg.K;
-H = zeros(I,K);
+H = zeros(N,K);
 
 xc = mean(tx);   % array centroid
 
@@ -632,7 +623,7 @@ for k = 1:K
     Rc = sqrt((xc - cfg.a(k))^2 + cfg.y(k)^2 + cfg.hPA^2);
     beta_k = (cfg.lambda/(4*pi*Rc))^2;   % common path loss for user k
 
-    for i = 1:I
+    for i = 1:N
         Ri = sqrt((tx(i) - cfg.a(k))^2 + cfg.y(k)^2 + cfg.hPA^2);
         H(i,k) = sqrt(beta_k) * exp(-1j * cfg.k0 * Ri);
     end
@@ -644,20 +635,20 @@ function H = build_H_miso_fixed_aperture(cfg, x, D)
 % x : antenna x-coordinates over a fixed aperture D
 % D : total aperture length
 
-I = numel(x);
+N = numel(x);
 K = cfg.K;
-H = zeros(I,K);
+H = zeros(N,K);
 
-if I == 1
+if N == 1
     d = D;
 else
-    d = D / (I-1);
+    d = D / (N-1);
 end
 
 d_ref = cfg.lambda / 2;
 scale = sqrt(d / d_ref);
 
-for i = 1:I
+for i = 1:N
     for k = 1:K
         R = sqrt((x(i)-cfg.a(k))^2 + cfg.y(k)^2 + cfg.hPA^2);
         H(i,k) = scale * (cfg.lambda/(4*pi)) * exp(-1j*cfg.k0*R) / R;
@@ -706,17 +697,14 @@ end
 end
 
 %% ======================================================================
-%% ======================== Baselines ===================================
+
+%% ======================== Baselines ====================================
 %% ======================================================================
 
 function Rtdma = tdma_singlemode_PASS(cfg, x)
 % single-mode PASS + TDMA:
 % slot-1 (1/2 time): use mode-1 only, user-1 only
 % slot-2 (1/2 time): use mode-1 only, user-2 only
-% Build full H and G
-% Heff = build_H_free_same_law(cfg, x);
-% G = build_G_multiPA_CMT(cfg, x);
-% Heff = (H') * G; % K x M
 
 R1 = sqrt((x(1)-cfg.a(1))^2 + cfg.y(1)^2 + cfg.hPA^2);
 R2 = sqrt((x(2)-cfg.a(2))^2 + cfg.y(2)^2 + cfg.hPA^2);
@@ -730,6 +718,10 @@ snr2 = cfg.Pmax * abs(h2)^2 / cfg.sigma2;
 
 Rtdma = 0.5*log2(1+snr1) + 0.5*log2(1+snr2);
 end
+
+%% ======================================================================
+%% ============================ WMMSE ===================================
+%% ======================================================================
 
 
 function Rsum = sumrate_from_HW(H, W, sigma2)
@@ -809,20 +801,18 @@ end
 
 
 
-%% ======================================================================
-%% =============== Baseline: PSO-Parameterized BF (fixed betaPA) =========
-%% ======================================================================
+%% ============================================================================
+%% ===================  PSO-KPBF for fixed uniform mode combining =============
+%% ============================================================================
 function out = pso_KPBF_multiPA_optx_lambda_p_fixedbeta(cfg, PSO, x0, lambda0, p0)
-% Baseline: Case-1 objective, but betaPA is fixed to cfg.betaPA_fixed (I x 1).
 % PSO jointly optimizes:
 %   - PA positions x (continuous)
-%   - Parameterized-BF variables lambda_k (positive, k=1..K)
-%   - Power-loading variables p_k (relative, positive; normalized inside)
+%   - KPBF variables lambda_k (positive, k=1..K) and power p_k
 
-I = cfg.N; K = cfg.K;
+N = cfg.N; K = cfg.K;
 
 assert(isfield(cfg,'betaPA_fixed') && ~isempty(cfg.betaPA_fixed), ...
-    'cfg.betaPA_fixed must be provided for fixed-betaPA baseline.');
+    'cfg.betaPA_fixed must be provided for uniform mode combining.');
 
 % velocity caps
 vmax_x   = PSO.vmax_x_factor * abs(cfg.xmax - cfg.xmin);
@@ -833,17 +823,17 @@ vmax_lp  = PSO.vmax_logp;
 if ~isfield(cfg,'lambdaBF_min') || isempty(cfg.lambdaBF_min), cfg.lambdaBF_min = 1e-4; end
 if ~isfield(cfg,'lambdaBF_max') || isempty(cfg.lambdaBF_max), cfg.lambdaBF_max = 1e4;  end
 
-Xx = zeros(PSO.P, I); Vx = zeros(PSO.P, I);
+Xx = zeros(PSO.P, N); Vx = zeros(PSO.P, N);
 Xl = zeros(PSO.P, K); Vl = zeros(PSO.P, K);
 Xp = zeros(PSO.P, K); Vp = zeros(PSO.P, K);
-Xx0 = zeros(PSO.P, I);
+Xx0 = zeros(PSO.P, N);
 
 beta_fixed_row = cfg.betaPA_fixed(:).';
 
 for pp=1:PSO.P
-    jitter_x = (2*rand(1,I)-1) * (0.5*cfg.lambda);
+    jitter_x = (2*rand(1,N)-1) * (0.5*cfg.lambda);
     Xx(pp,:) = proj_and_repair(x0 + jitter_x, cfg.xmin, cfg.xmax, cfg.dmin);
-    Vx(pp,:) = (2*rand(1,I)-1) * (0.1*cfg.lambda);
+    Vx(pp,:) = (2*rand(1,N)-1) * (0.1*cfg.lambda);
 
     l0 = max(cfg.lambdaBF_min, min(cfg.lambdaBF_max, lambda0(:)));
     z0 = log(l0(:).');
@@ -882,7 +872,7 @@ for t=1:PSO.T
     end
 
     for pp=1:PSO.P
-        r1x = rand(1,I); r2x = rand(1,I);
+        r1x = rand(1,N); r2x = rand(1,N);
         r1k = rand(1,K); r2k = rand(1,K);
 
         Vx(pp,:) = PSO.w*Vx(pp,:) ...
