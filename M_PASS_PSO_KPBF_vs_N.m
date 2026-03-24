@@ -221,7 +221,7 @@ plot(N_list, mean(R_midbeta,2), ':h', colors{1}, 'LineWidth', 2.5);
 plot(N_list, mean(R_tdma1,2), '-.^', colors{2}, 'LineWidth', 2.5);
 plot(N_list, mean(R_mimo_hybrid,2), '-d', colors{3}, 'LineWidth', 2.5);
 
-xlabel('Number of PAs / antennas, I','Interpreter','latex');
+xlabel('Number of PAs/antennas','Interpreter','latex');
 ylabel('Sum rate (bps/Hz)','Interpreter','latex');
 
 legend({ ...
