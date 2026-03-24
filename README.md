@@ -42,12 +42,17 @@ The repository includes scripts to reproduce the main numerical results from the
 
 ### Reproduce Fig. 2 - Achievable Rate vs. Maximum Transmit Power
 
-Simply run [M_PASS_PSO_KPBF_Pmax.m](./M_PASS_PSO_KPBF_Pmax.m)
+Simply run [M_PASS_PSO_KPBF_Pmax.m](./M_PASS_PSO_KPBF_Pmax.m) you will get 
+<p align="center">
+  <img src="figs/rate_vs_Pmax.jpg" width="400">
+</p>
 
 ### Reproduce Fig. 3 - Achievable Rate vs. Number of PAs/Antennas
 
-Simply run [M_PASS_PSO_KPBF_vs_N.m](./M_PASS_PSO_KPBF_vs_N.m)
-
+Simply run [M_PASS_PSO_KPBF_vs_N.m](./M_PASS_PSO_KPBF_vs_N.m) you will get
+<p align="center">
+  <img src="figs/rate_vs_N.jpg" width="400">
+</p>
 
 
 ## ❤️ Citation
